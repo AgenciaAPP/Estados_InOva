@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.env
+.supervisor.hash
+.env.*
+!.env.example
+*.log
+~$*
+Consultas_estados.docx
