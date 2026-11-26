@@ -19,3 +19,5 @@ dist/
 *.log
 ~$*
 Consultas_estados.docx
+
+*:Zone.Identifier
