@@ -1,0 +1,17 @@
+.env
+.env.*
+.supervisor.hash*
+**/.env
+**/.env.*
+**/.supervisor.hash*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.cer
+**/*.crt
+dist/
+node_modules/
+.git/
+.vercel/
+*.log
