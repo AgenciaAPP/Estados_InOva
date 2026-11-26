@@ -1,0 +1,39 @@
+{
+  "name": "in-ova-consulta-informes",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^24.7.0"
+  },
+  "scripts": {
+    "postinstall": "node scripts/preparar-mysql.ts",
+    "dev": "vite build --watch --mode development --configLoader native",
+    "dev:api": "node --env-file-if-exists=.env --watch backend/index.ts",
+    "typecheck": "tsc -p tsconfig.json && tsc -p backend/tsconfig.json --noEmit && tsc -p api/tsconfig.json --noEmit",
+    "build:frontend": "vite build --configLoader native",
+    "build": "npm run typecheck && tsc -p backend/tsconfig.json && npm run build:frontend",
+    "start": "node --env-file-if-exists=.env dist/server/backend/index.js",
+    "start:demo": "node --env-file-if-exists=.env.demo dist/server/backend/demo-vercel.js",
+    "predb:check": "node scripts/preparar-mysql.ts",
+    "db:check": "node --env-file-if-exists=.env backend/index.ts --comprobar-mysql",
+    "inova:check": "node --env-file-if-exists=.env scripts/comprobar-inova.ts",
+    "supervisor:clave": "node scripts/clave-supervisor.ts",
+    "test": "node --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "exceljs": "4.4.0",
+    "express": "5.3.0",
+    "mysql2": "3.24.6",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.6",
+    "@types/node": "24.19.0",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "5.9.3",
+    "vite": "6.4.5"
+  }
+}
