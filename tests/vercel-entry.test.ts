@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import { randomBytes } from 'node:crypto'
+import { execFileSync } from 'node:child_process'
 import type { AddressInfo } from 'node:net'
 import type { Server } from 'node:http'
 import { test } from 'node:test'
@@ -34,10 +35,16 @@ test('La entrada serverless recompone la ruta de Vercel y sirve la configuració
 
   let server: Server | undefined
   try {
-    const modulo = await import('../api/index.ts')
-    server = modulo.default.listen(0, '127.0.0.1')
-    await once(server, 'listening')
-    const base = 'http://127.0.0.1:' + (server.address() as AddressInfo).port
+    execFileSync(process.execPath, ['node_modules/typescript/bin/tsc', '-p', 'backend/tsconfig.json'], {
+      cwd: process.cwd(),
+      stdio: 'pipe',
+    })
+    const rutaEntrada: string = '../api/index.js'
+    const modulo = await import(rutaEntrada) as typeof import('../api/handler.ts')
+    const servidor = modulo.default.listen(0, '127.0.0.1')
+    server = servidor
+    await once(servidor, 'listening')
+    const base = 'http://127.0.0.1:' + (servidor.address() as AddressInfo).port
     const respuesta = await fetch(base + '/api/index?__ruta=configuracion')
     assert.equal(respuesta.status, 200)
     assert.deepEqual(await respuesta.json(), {

@@ -70,11 +70,11 @@ async function crearAplicacionVercel() {
   return app
 }
 
-const handler = express()
-handler.disable('x-powered-by')
+const vercelHandler = express()
+vercelHandler.disable('x-powered-by')
 let aplicacion: ReturnType<typeof crearAplicacionVercel> | undefined
 
-handler.use(async (req, res) => {
+vercelHandler.use(async (req, res) => {
   try {
     if (!aplicacion) {
       const inicio = crearAplicacionVercel()
@@ -104,4 +104,4 @@ handler.use(async (req, res) => {
   }
 })
 
-export default handler
+export default vercelHandler

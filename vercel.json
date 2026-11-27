@@ -3,9 +3,9 @@
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist/client",
   "functions": {
-    "api/index.ts": {
+    "api/index.js": {
       "maxDuration": 300,
-      "includeFiles": "{backend,shared}/**"
+      "includeFiles": "dist/server/**"
     }
   },
   "rewrites": [
