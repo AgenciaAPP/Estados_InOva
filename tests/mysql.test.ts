@@ -40,6 +40,7 @@ test('Las fuentes son independientes y TLS comprueba certificado e identidad por
   assert.ok(cfg.fuente === 'mysql')
   assert.equal(cfg.mysql.database, 'esquema_ficticio')
   assert.equal(cfg.mysql.port, 3306)
+  assert.equal(cfg.mysql.connectionLimit, 2)
   assert.ok(typeof cfg.mysql.ssl === 'object')
   assert.equal(cfg.mysql.ssl.rejectUnauthorized, true)
   assert.equal(cfg.mysql.ssl.verifyIdentity, true)
@@ -60,6 +61,29 @@ test('VERIFY_CA exige TLS y una CA explícita. Un modo desconocido falla al conf
   for (const valor of ['', 'PREFERRED', 'VERIFY_CA ']) {
     assert.throws(() => configurar({ ...entornoPrueba, DB_TLS_MODE: valor }), /DB_TLS_MODE/)
   }
+})
+
+test('La CA de Vercel admite PEM en variable privada con saltos de línea escapados', () => {
+  const pem = '-----BEGIN CERTIFICATE-----\nZHVtbXk=\n-----END CERTIFICATE-----'
+  const configuracion = configurar({
+    ...entornoPrueba,
+    DB_TLS_MODE: 'VERIFY_CA',
+    DB_SSL_CA_CONTENT: pem.replace(/\n/g, '\\n'),
+  })
+  assert.ok(configuracion.fuente === 'mysql')
+  const ssl = configuracion.mysql.ssl
+  assert.ok(ssl && typeof ssl === 'object')
+  assert.equal(ssl.ca, pem)
+  assert.throws(() => configurar({
+    ...entornoPrueba,
+    DB_SSL_CA_FILE: 'ca.pem',
+    DB_SSL_CA_CONTENT: pem,
+  }), /solo una/)
+  assert.throws(() => configurar({
+    ...entornoPrueba,
+    DB_TLS: 'false',
+    DB_SSL_CA_CONTENT: pem,
+  }), /requiere DB_TLS=true/)
 })
 
 test('El plazo compartido de MySQL vale 15 s por defecto y solo acepta milisegundos válidos', () => {

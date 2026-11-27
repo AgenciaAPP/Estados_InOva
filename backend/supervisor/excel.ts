@@ -19,7 +19,10 @@ export function nombreExcel(ahora = new Date()) {
 export class LimiteExcel extends Error {}
 const limiteVolumen = 'El resultado excede el tamaño de exportación. Acota la búsqueda y vuelve a descargar.'
 
-export async function generarExcel(filas: readonly FilaPanel[]): Promise<Buffer> {
+export async function generarExcel(filas: readonly FilaPanel[], limiteBytes = maximoBytes): Promise<Buffer> {
+  if (!Number.isSafeInteger(limiteBytes) || limiteBytes < 1 || limiteBytes > maximoBytes) {
+    throw new RangeError('El límite de exportación debe estar entre 1 byte y 16 MiB.')
+  }
   if (filas.length > maximoFilas) throw new LimiteExcel(limiteVolumen)
   // Validar antes de abrir el escritor evita producir un libro parcial o truncar una celda.
   let bytesTexto = 0
@@ -29,14 +32,14 @@ export async function generarExcel(filas: readonly FilaPanel[]): Promise<Buffer>
       if (texto.length > 32_767) throw new LimiteExcel('Una celda supera el límite de texto de Excel. Acota la búsqueda para exportar las demás filas.')
       bytesTexto += Buffer.byteLength(texto)
     }
-    if (bytesTexto > maximoBytes) throw new LimiteExcel(limiteVolumen)
+    if (bytesTexto > limiteBytes) throw new LimiteExcel(limiteVolumen)
   }
 
   const fragmentos: Buffer[] = []
   let bytesZip = 0
   const salida = new Writable({ write(chunk: Buffer, _encoding, callback) {
     bytesZip += chunk.length
-    if (bytesZip <= maximoBytes) fragmentos.push(chunk)
+    if (bytesZip <= limiteBytes) fragmentos.push(chunk)
     callback()
   } })
   const { default: ExcelJS } = await import('exceljs')
@@ -63,6 +66,6 @@ export async function generarExcel(filas: readonly FilaPanel[]): Promise<Buffer>
   }
   hoja.commit()
   await libro.commit()
-  if (bytesZip > maximoBytes) throw new LimiteExcel(limiteVolumen)
+  if (bytesZip > limiteBytes) throw new LimiteExcel(limiteVolumen)
   return Buffer.concat(fragmentos, bytesZip)
 }

@@ -11,6 +11,8 @@
     "dev": "vite build --watch --mode development --configLoader native",
     "dev:api": "node --env-file-if-exists=.env --watch backend/index.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p backend/tsconfig.json --noEmit",
+    "build:frontend": "vite build --configLoader native",
+    "build:vercel": "npm run typecheck && npm run build:frontend",
     "build": "npm run typecheck && tsc -p backend/tsconfig.json && vite build --configLoader native",
     "start": "node --env-file-if-exists=.env dist/server/backend/index.js",
     "predb:check": "node scripts/preparar-mysql.ts",

@@ -30,9 +30,14 @@ function opcionesMysql(env: NodeJS.ProcessEnv): PoolOptions {
   if (modoTls !== 'VERIFY_IDENTITY' && modoTls !== 'VERIFY_CA') {
     throw new Error('DB_TLS_MODE debe ser VERIFY_IDENTITY o VERIFY_CA.')
   }
+  const contenidoCa = env.DB_SSL_CA_CONTENT?.replace(/\\n/g, '\n').trim()
+  const archivoCa = env.DB_SSL_CA_FILE?.trim()
+  if (contenidoCa && archivoCa) throw new Error('Configura solo una de DB_SSL_CA_CONTENT o DB_SSL_CA_FILE.')
   if (tls === 'false' && env.DB_TLS_MODE !== undefined) throw new Error('DB_TLS_MODE requiere DB_TLS=true.')
-  if (modoTls === 'VERIFY_CA' && !env.DB_SSL_CA_FILE) throw new Error('VERIFY_CA requiere DB_SSL_CA_FILE en formato PEM.')
-  if (tls === 'false' && env.DB_SSL_CA_FILE) throw new Error('DB_SSL_CA_FILE requiere DB_TLS=true.')
+  if (modoTls === 'VERIFY_CA' && !contenidoCa && !archivoCa) {
+    throw new Error('VERIFY_CA requiere DB_SSL_CA_CONTENT o DB_SSL_CA_FILE en formato PEM.')
+  }
+  if (tls === 'false' && (contenidoCa || archivoCa)) throw new Error('La CA requiere DB_TLS=true.')
   const servername = env.DB_TLS_SERVERNAME?.trim() || undefined
   if (servername) {
     if (tls !== 'true') throw new Error('DB_TLS_SERVERNAME requiere DB_TLS=true.')
@@ -41,11 +46,13 @@ function opcionesMysql(env: NodeJS.ProcessEnv): PoolOptions {
       throw new Error('DB_TLS_SERVERNAME debe ser el nombre DNS del servidor, sin puerto ni comodines.')
     }
   }
-  let ca: string | undefined
-  if (env.DB_SSL_CA_FILE) {
-    try { ca = readFileSync(env.DB_SSL_CA_FILE, 'utf8') }
+  let ca = contenidoCa || undefined
+  if (archivoCa) {
+    try { ca = readFileSync(archivoCa, 'utf8') }
     catch { throw new Error('No se pudo leer DB_SSL_CA_FILE.') }
-    if (!ca.includes('-----BEGIN CERTIFICATE-----')) throw new Error('DB_SSL_CA_FILE debe contener una CA en formato PEM.')
+  }
+  if (ca && (ca.length > 65536 || !ca.includes('-----BEGIN CERTIFICATE-----'))) {
+    throw new Error('La CA debe ser un certificado PEM de hasta 64 KiB.')
   }
   const ssl = tls === 'true'
     ? { ca, servername, rejectUnauthorized: true, verifyIdentity: modoTls === 'VERIFY_IDENTITY', minVersion: 'TLSv1.2' }
@@ -54,8 +61,8 @@ function opcionesMysql(env: NodeJS.ProcessEnv): PoolOptions {
     host, user, password: env.DB_PASSWORD, database,
     port: puerto(env.DB_PORT ?? '3306', 'DB_PORT'),
     ssl,
-    connectionLimit: 3, maxIdle: 1, idleTimeout: 60000,
-    waitForConnections: false, connectTimeout,
+    connectionLimit: 2, maxIdle: 1, idleTimeout: 60000,
+    waitForConnections: true, queueLimit: 10, connectTimeout,
     supportBigNumbers: true, bigNumberStrings: true, multipleStatements: false,
   }
 }

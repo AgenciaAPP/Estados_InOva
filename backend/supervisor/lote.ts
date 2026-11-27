@@ -4,6 +4,16 @@ import type { ListarActivos } from './contratos.ts'
 import type { ConfigPanel } from './config.ts'
 
 const tamanoPagina = 25
+
+export interface LoteGuardado {
+  fecha: string
+  estado: PaginaPanel['estado']
+  candidatos: number | null
+  procesados: number
+  incluidos: number
+  filas: FilaPanel[]
+}
+
 function normalizar(texto: string) {
   return texto.trim().toLowerCase().normalize('NFD').replace(/\p{M}/gu, '')
 }
@@ -16,6 +26,28 @@ export class Lote {
   private incluidos = 0
   private filas: FilaPanel[] = []
   private cancelado = false
+
+  static restaurar(guardado: LoteGuardado) {
+    const lote = new Lote()
+    lote.fecha = guardado.fecha
+    lote.estado = guardado.estado
+    lote.candidatos = guardado.candidatos
+    lote.procesados = guardado.procesados
+    lote.incluidos = guardado.incluidos
+    lote.filas = guardado.filas
+    return lote
+  }
+
+  guardar(): LoteGuardado {
+    return {
+      fecha: this.fecha,
+      estado: this.estado,
+      candidatos: this.candidatos,
+      procesados: this.procesados,
+      incluidos: this.incluidos,
+      filas: this.filas,
+    }
+  }
 
   cancelar() {
     this.cancelado = true

@@ -2,6 +2,8 @@
 
 Aplicación local de solo lectura para consultar por cédula los estados de gestión, supervisión y Cuenta de cobro y Pago de Seguridad Social. Funciona en demostración completa, con MySQL y estados simulados, o con MySQL y estados obtenidos por HTTPS de In-Ova. El navegador se comunica únicamente con Express.
 
+Para desplegar la raíz en Vercel con el panel persistente, revisar las variables necesarias y validar el esquema de MySQL, consulta la [guía de Vercel y de datos](./DESPLIEGUE_VERCEL_Y_BASE_DE_DATOS.md). La aplicación dentro de `estados/` es independiente y usa datos ficticios.
+
 ## Ejecutar la aplicación
 
 Requiere Node.js 24 o posterior y npm. Ejecuta los comandos desde el directorio que contiene `package.json`.
@@ -94,6 +96,7 @@ DB_TLS=true
 DB_TLS_MODE=VERIFY_IDENTITY
 DB_TLS_SERVERNAME=
 DB_SSL_CA_FILE=
+DB_SSL_CA_CONTENT=
 ```
 
 | Variable | Valor o criterio |
@@ -106,7 +109,8 @@ DB_SSL_CA_FILE=
 | `DB_TLS` | Mantén `true` para la conexión institucional. Ambos modos usan TLS 1.2 o superior y exigen una cadena de confianza vigente antes del login. |
 | `DB_TLS_MODE` | `VERIFY_IDENTITY` por defecto. Comprueba también el nombre DNS o la IP. `VERIFY_CA` requiere autorización institucional para esta cuenta y un PEM explícito. |
 | `DB_TLS_SERVERNAME` | DNS opcional enviado como SNI. En `VERIFY_IDENTITY`, Node verifica este DNS o, si está vacío, el valor de `DB_HOST`. En `VERIFY_CA` se puede dejar vacío cuando se conecta por IP. |
-| `DB_SSL_CA_FILE` | Ruta al archivo PEM de la CA institucional. Es obligatoria para `VERIFY_CA`. En `VERIFY_IDENTITY`, dejarla vacía utiliza las autoridades de confianza de Node. |
+| `DB_SSL_CA_FILE` | Ruta local al archivo PEM de la CA institucional. |
+| `DB_SSL_CA_CONTENT` | Alternativa a `DB_SSL_CA_FILE`: contenido PEM de la CA; acepta saltos de línea normales o `\n` literales. En Vercel úsala como variable privada. Configura solo una de las dos. `VERIFY_CA` requiere una CA explícita. |
 
 Tras guardar el archivo, ejecuta desde la raíz del proyecto con Node 24 o posterior.
 
@@ -126,7 +130,7 @@ Conserva `CONTRACT_SOURCE=mysql`, `INOVA_SOURCE=mock`, `DB_TLS=true` y la IP ins
 | La IP institucional figura como entrada **IP Address** en el SAN (Subject Alternative Name) | Deja `DB_TLS_SERVERNAME=` vacío. Node comprueba esa IP y el cliente omite SNI para el literal IP. |
 | El certificado identifica al servicio con un DNS | Escribe el nombre DNS completo y concreto del servidor en `DB_TLS_SERVERNAME`. El socket sigue conectando a la IP de `DB_HOST`. Ese DNS se usa para SNI y para comprobar el certificado, sin tener que resolverlo en el equipo cliente. |
 
-Solicita al administrador el **DNS oficial del servicio y los SAN del certificado**, y confirma si la IP suministrada está incluida como IP. Si utilizan una autoridad privada, pide su CA en PEM por un canal institucional y configura `DB_SSL_CA_FILE`. El servidor debe presentar los certificados intermedios necesarios. Si ninguna identidad coincide, hace falta el endpoint correcto o un certificado emitido para la identidad prevista.
+Solicita al administrador el **DNS oficial del servicio y los SAN del certificado**, y confirma si la IP suministrada está incluida como IP. Si utilizan una autoridad privada, pide su CA en PEM por un canal institucional y configúrala como `DB_SSL_CA_FILE` localmente o `DB_SSL_CA_CONTENT` en Vercel. El servidor debe presentar los certificados intermedios necesarios. Si ninguna identidad coincide, hace falta el endpoint correcto o un certificado emitido para la identidad prevista.
 
 `Test-NetConnection` confirma que se puede abrir el puerto TCP desde el equipo que ejecuta la prueba. Ejecuta `npm run db:check` desde ese mismo equipo para comprobar TLS y el acceso de lectura. El diagnóstico distingue una identidad que no coincide de un fallo de red. Si falla la confianza, revisa la CA y la cadena que entrega el servidor.
 
@@ -158,7 +162,7 @@ Para volver al modo predeterminado, establece `DB_TLS_MODE=VERIFY_IDENTITY` y us
 
 Si `contratista` tiene una clave foránea declarada o su tipo no es textual, el arranque se detiene. Un campo de texto sin clave foránea también podría contener códigos. Su significado debe confirmarse con el responsable del esquema. Si resulta ser una referencia, se necesita la relación documentada antes de adaptar la consulta.
 
-El pool `mysql2/promise` admite tres conexiones. Con el plazo predeterminado de 15 segundos, un saludo que llega a los 5 segundos deja aproximadamente 10 segundos para TLS y autenticación. Una vez aceptado el login, cada lectura de `db:check` tiene su propio plazo de 6 segundos, incluida la preparación de la sentencia. Si todas las conexiones están ocupadas, la petición falla sin formar una cola. La búsqueda utiliza `execute` con la cédula como parámetro de texto.
+El pool `mysql2/promise` admite dos conexiones por instancia de Node y puede mantener una cola de hasta diez lecturas cuando ambas están ocupadas. Vercel puede ejecutar varias instancias; limita el acceso a la base y usa una cuenta de solo lectura. Con el plazo predeterminado de 15 segundos, un saludo que llega a los 5 segundos deja aproximadamente 10 segundos para TLS y autenticación. Una vez aceptado el login, cada lectura de `db:check` tiene su propio plazo de 6 segundos, incluida la preparación de la sentencia. La búsqueda utiliza `execute` con la cédula como parámetro de texto.
 
 ```sql
 SELECT nitCc, contratista, numeroContrato, supervisor, apoyoSupervision, apoyoJuridico, apoyoLogistico

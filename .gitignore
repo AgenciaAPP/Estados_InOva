@@ -4,6 +4,11 @@ dist/
 .supervisor.hash
 .env.*
 !.env.example
+.vercel/
+*.pem
+*.key
+*.pfx
+*.p12
 *.log
 ~$*
 Consultas_estados.docx

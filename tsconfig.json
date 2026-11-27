@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["frontend", "shared", "vite.config.ts", "tests", "scripts"]
+  "include": ["api", "frontend", "shared", "vite.config.ts", "tests", "scripts"]
 }

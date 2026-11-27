@@ -24,7 +24,14 @@ export async function verificarClave(clave: string, hash: string) {
   return crypto.timingSafeEqual(await derivar(clave, Buffer.from(partes[1], 'hex')), Buffer.from(partes[2], 'hex'))
 }
 
-export function cargarHash() {
+export function cargarHash(env: NodeJS.ProcessEnv = process.env) {
+  if (env.SUPERVISOR_HASH !== undefined) {
+    const hash = env.SUPERVISOR_HASH.trim()
+    if (!formato.test(hash) || typeof crypto.argon2 !== 'function') {
+      throw new Error('SUPERVISOR_HASH no tiene un formato Argon2id válido o Node no admite Argon2id.')
+    }
+    return hash
+  }
   try {
     const hash = readFileSync(archivoHash, 'utf8').trim()
     if (!formato.test(hash) || typeof crypto.argon2 !== 'function') throw new Error()
